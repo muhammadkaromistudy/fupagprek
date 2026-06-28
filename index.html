@@ -153,6 +153,7 @@ html,body{height:100%;margin:0;font-family:-apple-system,BlinkMacSystemFont,'SF 
 .switch.on{background:var(--green)}
 .switch-knob{position:absolute;width:27px;height:27px;background:white;border-radius:50%;top:2px;left:2px;transition:.2s;box-shadow:0 2px 4px rgba(0,0,0,.2)}
 .switch.on .switch-knob{left:22px}
+.profile-menu-item:active{background:var(--bg)}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 </head>
@@ -210,13 +211,16 @@ html,body{height:100%;margin:0;font-family:-apple-system,BlinkMacSystemFont,'SF 
             <div style="color:var(--secondary);font-size:15px">Halo,</div>
             <div class="page-title" style="margin:0">Rina</div>
           </div>
-          <div style="width:36px;height:36px;border-radius:18px;background:var(--card);display:flex;align-items:center;justify-content:center"><ion-icon name="notifications-outline" style="font-size:20px"></ion-icon></div>
+          <div style="display:flex;gap:10px">
+            <div style="width:36px;height:36px;border-radius:18px;background:var(--card);display:flex;align-items:center;justify-content:center"><ion-icon name="notifications-outline" style="font-size:20px"></ion-icon></div>
+            <div id="profile-avatar-btn" onclick="openProfileMenu()" style="width:36px;height:36px;border-radius:18px;background:linear-gradient(135deg,var(--orange1),var(--orange2));display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer"><ion-icon name="person" style="font-size:20px;color:white"></ion-icon></div>
+          </div>
         </div>
         <div class="grid-2">
           <div class="card">
             <div class="card-title">Penjualan Hari Ini</div>
-            <div class="metric" id="kpi-today">Rp 1.250K</div>
-            <div class="metric-sub">23 transaksi</div>
+            <div class="metric" id="kpi-today">Rp 0K</div>
+            <div class="metric-sub" id="kpi-today-count">0 transaksi</div>
           </div>
           <div class="card">
             <div class="card-title">Presensi</div>
@@ -269,6 +273,18 @@ html,body{height:100%;margin:0;font-family:-apple-system,BlinkMacSystemFont,'SF 
             <div class="item-sale-name">Jamur</div>
             <div class="item-sale-price">Rp 12.000</div>
             <div class="item-sale-count" id="cnt-3">0</div>
+          </div>
+          <div class="item-sale-card" data-idx="4" onclick="tapItem(4)" oncontextmenu="holdItem(event,4)">
+            <div class="item-sale-emoji">🍚</div>
+            <div class="item-sale-name">Nasi Geprek</div>
+            <div class="item-sale-price">Rp 8.000</div>
+            <div class="item-sale-count" id="cnt-4">0</div>
+          </div>
+          <div class="item-sale-card" data-idx="5" onclick="tapItem(5)" oncontextmenu="holdItem(event,5)">
+            <div class="item-sale-emoji">🍚</div>
+            <div class="item-sale-name">Nasi Chicken</div>
+            <div class="item-sale-price">Rp 8.000</div>
+            <div class="item-sale-count" id="cnt-5">0</div>
           </div>
         </div>
         <!-- Total Bar -->
@@ -378,6 +394,25 @@ html,body{height:100%;margin:0;font-family:-apple-system,BlinkMacSystemFont,'SF 
           <div class="card-title">Riwayat</div>
           <div id="presensi-history"></div>
         </div>
+        <!-- Tombol demo: skip presensi -->
+        <button onclick="skipPresensiDemo()" style="width:100%;padding:12px;margin-top:4px;border:1.5px dashed var(--border);border-radius:12px;background:transparent;font-size:13px;font-weight:600;color:var(--secondary)">⏭️ Lewati Presensi (Demo)</button>
+      </div>
+    </div>
+
+    <!-- MODAL PENDAFTARAN WAJAH -->
+    <div id="face-register-modal" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.65);align-items:center;justify-content:center">
+      <div style="background:var(--card);border-radius:20px;padding:20px;width:90%;max-width:360px;position:relative">
+        <button onclick="closeFaceRegisterModal()" aria-label="Tutup" style="position:absolute;top:12px;right:12px;width:32px;height:32px;border-radius:16px;border:none;background:var(--bg);font-size:18px;line-height:1;color:var(--secondary);display:flex;align-items:center;justify-content:center">✕</button>
+        <div style="font-size:17px;font-weight:700;margin-bottom:4px;text-align:center">Daftarkan Wajah</div>
+        <div style="font-size:13px;color:var(--secondary);margin-bottom:16px;text-align:center">Data wajah belum ada. Posisikan wajah di tengah — tersimpan otomatis.</div>
+        <div style="position:relative;margin:0 auto 14px;width:100%;max-width:280px;border-radius:16px;overflow:hidden;background:#000;aspect-ratio:4/3">
+          <video id="face-reg-video" autoplay muted playsinline style="width:100%;height:100%;object-fit:cover;display:block"></video>
+          <canvas id="face-reg-canvas" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
+          <div id="face-reg-ring" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;pointer-events:none">
+            <svg width="70" height="70" viewBox="0 0 80 80" style="filter:drop-shadow(0 2px 6px rgba(0,0,0,.5))"><circle cx="40" cy="40" r="34" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="6"/><circle id="face-reg-ring-progress" cx="40" cy="40" r="34" fill="none" stroke="#007AFF" stroke-width="6" stroke-dasharray="213" stroke-dashoffset="213" stroke-linecap="round" transform="rotate(-90 40 40)"/><text x="40" y="46" text-anchor="middle" fill="white" font-size="20" font-weight="700" id="face-reg-ring-num">2</text></svg>
+          </div>
+        </div>
+        <div id="face-reg-status" style="text-align:center;font-size:13px;color:var(--secondary)">Membuka kamera...</div>
       </div>
     </div>
     <nav class="tabbar" id="tabsK">
@@ -393,7 +428,7 @@ html,body{height:100%;margin:0;font-family:-apple-system,BlinkMacSystemFont,'SF 
     <div class="viewpager" id="pagerA">
       <!-- Beranda Admin -->
       <div class="page">
-        <div class="page-header"><div class="page-title">Dashboard</div><div style="font-size:14px;color:var(--secondary)">Admin</div></div>
+        <div class="page-header"><div class="page-title">Dashboard</div><div style="display:flex;align-items:center;gap:10px"><div style="font-size:14px;color:var(--secondary)">Admin</div><div id="profile-avatar-btn-admin" onclick="openProfileMenu()" style="width:36px;height:36px;border-radius:18px;background:linear-gradient(135deg,var(--orange1),var(--orange2));display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer"><ion-icon name="person" style="font-size:20px;color:white"></ion-icon></div></div></div>
         <div class="grid-2">
           <div class="card"><div class="card-title">Omzet Bulan Ini</div><div class="metric">Rp 38,5jt</div><div class="metric-sub" style="color:var(--green)">+12% vs lalu</div></div>
           <div class="card"><div class="card-title">Transaksi</div><div class="metric">1.240</div><div class="metric-sub">41/hari rata2</div></div>
@@ -440,6 +475,31 @@ html,body{height:100%;margin:0;font-family:-apple-system,BlinkMacSystemFont,'SF 
     </nav>
   </div>
 
+  <!-- PROFILE POPOVER -->
+  <div id="profile-overlay" onclick="closeProfileMenu()" style="display:none;position:absolute;inset:0;z-index:700;background:rgba(0,0,0,.25)"></div>
+  <div id="profile-menu" style="display:none;position:absolute;top:56px;right:16px;z-index:701;width:240px;background:var(--card);border-radius:16px;box-shadow:0 12px 32px rgba(0,0,0,.25);overflow:hidden">
+    <div style="padding:16px;display:flex;gap:10px;align-items:center;border-bottom:.5px solid var(--border)">
+      <div style="width:44px;height:44px;border-radius:22px;background:linear-gradient(135deg,var(--orange1),var(--orange2));display:flex;align-items:center;justify-content:center;flex-shrink:0"><ion-icon name="person" style="font-size:22px;color:white"></ion-icon></div>
+      <div style="min-width:0">
+        <div id="profile-menu-name" style="font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Rina</div>
+        <div id="profile-menu-role" style="font-size:12px;color:var(--secondary)">Karyawan</div>
+      </div>
+    </div>
+    <div class="profile-menu-item" onclick="profileAction('foto')" style="display:flex;align-items:center;gap:12px;padding:13px 16px;font-size:14px;font-weight:500;cursor:pointer"><ion-icon name="camera-outline" style="font-size:19px;color:var(--secondary)"></ion-icon>Ganti Foto</div>
+    <div class="profile-menu-item" onclick="profileAction('akun')" style="display:flex;align-items:center;gap:12px;padding:13px 16px;font-size:14px;font-weight:500;cursor:pointer"><ion-icon name="information-circle-outline" style="font-size:19px;color:var(--secondary)"></ion-icon>Informasi Akun</div>
+    <div class="profile-menu-item" onclick="profileAction('gaji')" style="display:flex;align-items:center;gap:12px;padding:13px 16px;font-size:14px;font-weight:500;cursor:pointer"><ion-icon name="cash-outline" style="font-size:19px;color:var(--secondary)"></ion-icon>Gaji</div>
+    <div class="profile-menu-item" onclick="profileAction('switch')" style="display:flex;align-items:center;gap:12px;padding:13px 16px;font-size:14px;font-weight:500;cursor:pointer;border-top:.5px solid var(--border)"><ion-icon name="swap-horizontal-outline" style="font-size:19px;color:var(--secondary)"></ion-icon>Switch Akun</div>
+    <div class="profile-menu-item" onclick="profileAction('logout')" style="display:flex;align-items:center;gap:12px;padding:13px 16px;font-size:14px;font-weight:600;cursor:pointer;color:var(--orange1)"><ion-icon name="log-out-outline" style="font-size:19px;color:var(--orange1)"></ion-icon>Keluar</div>
+  </div>
+
+  <!-- BOTTOM SHEET (digunakan oleh setiap item profile menu) -->
+  <div id="bottomsheet-overlay" onclick="closeBottomSheet()" style="display:none;position:absolute;inset:0;z-index:800;background:rgba(0,0,0,.5)"></div>
+  <div id="bottomsheet" style="display:none;position:absolute;left:0;right:0;bottom:0;z-index:801;background:var(--card);border-radius:20px 20px 0 0;padding:10px 20px 28px;max-width:430px;margin:0 auto;transform:translateY(100%);transition:transform .25s ease-out">
+    <div style="width:36px;height:5px;background:var(--border);border-radius:3px;margin:4px auto 14px"></div>
+    <div id="bottomsheet-title" style="font-size:17px;font-weight:700;margin-bottom:4px">—</div>
+    <div id="bottomsheet-body" style="font-size:14px;color:var(--secondary);line-height:1.5"></div>
+  </div>
+
 </div>
 
 <script>
@@ -459,6 +519,9 @@ document.querySelectorAll('.seg-btn').forEach(b=>b.onclick=()=>{
 });
 function doLogin(){
   document.getElementById('login').style.display='none';
+  window.currentUser=document.getElementById('user').value||role;
+  document.getElementById('profile-menu-name').textContent=role==='admin'?'Admin':'Rina';
+  document.getElementById('profile-menu-role').textContent=role==='admin'?'Administrator':'Karyawan';
   if(role==='admin'){document.getElementById('app-admin').style.display='flex';initAdmin();}
   else{document.getElementById('app-karyawan').style.display='flex';initKaryawan();}
 }
@@ -483,12 +546,16 @@ const MENU_ITEMS=[
   {n:'Chicken',    e:'🍗',h:20000},
   {n:'Tahu Crispy',e:'🥓',h:10000},
   {n:'Jamur',      e:'🍄',h:12000},
+  {n:'Nasi Geprek',e:'🍚',h:8000},
+  {n:'Nasi Chicken',e:'🍚',h:8000},
 ];
 // stokAwal per item disimpan di localStorage, default 0 (belum diinput)
-let stokAwal = JSON.parse(localStorage.getItem('fp_stok_awal')||'[0,0,0,0]');
+let stokAwal = JSON.parse(localStorage.getItem('fp_stok_awal')||'[0,0,0,0,0,0]');
+// Normalisasi panjang array jika data lama di localStorage masih 4 item (sebelum penambahan menu baru)
+while(stokAwal.length<MENU_ITEMS.length) stokAwal.push(0);
 let sales    = JSON.parse(localStorage.getItem('fp_sales')||'[]');
 let presensi = JSON.parse(localStorage.getItem('fp_presensi')||'[]');
-let cart     = [0,0,0,0];
+let cart     = MENU_ITEMS.map(()=>0);
 
 // STATE FLAGS
 function isPresensiHariIni(){
@@ -511,6 +578,10 @@ function initKaryawan(){
   });
   updateSales(); updateStok(); updatePresensi(); startClock();
   applyLocks();
+  // Wajib daftar wajah dulu jika belum ada data — langsung muncul setelah login
+  if(!hasStoredFace()){
+    setTimeout(()=>{ openFaceRegisterModal(); }, 300);
+  }
 }
 function initAdmin(){
   gotoA=setupPager('pagerA','tabsA');
@@ -597,7 +668,8 @@ function confirmAndSaveModal(){
   // Langsung simpan transaksi ini saja
   const now=new Date();
   const time=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
-  sales.unshift({menu:MENU_ITEMS[holdTarget].n,qty,total:qty*MENU_ITEMS[holdTarget].h,time,itemIdx:holdTarget});
+  const dateStr=now.toLocaleDateString('id-ID');
+  sales.unshift({menu:MENU_ITEMS[holdTarget].n,qty,total:qty*MENU_ITEMS[holdTarget].h,time,date:dateStr,itemIdx:holdTarget});
   localStorage.setItem('fp_sales',JSON.stringify(sales));
   cart[holdTarget]=0;
   refreshCartUI();
@@ -623,20 +695,18 @@ function refreshCartUI(){
   if(disp) disp.textContent='Rp '+total.toLocaleString('id-ID');
 }
 
-function resetCart(){cart=[0,0,0,0];refreshCartUI();}
+function resetCart(){cart=MENU_ITEMS.map(()=>0);refreshCartUI();}
 
 function saveSaleNew(){
   if(!isPresensiHariIni()||!isStokDiinput()) return;
   const now=new Date();
   const time=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+  const dateStr=now.toLocaleDateString('id-ID');
   let saved=0;
-  cart.forEach((q,i)=>{if(q>0){sales.unshift({menu:MENU_ITEMS[i].n,qty:q,total:q*MENU_ITEMS[i].h,time,itemIdx:i});saved++;}});
+  cart.forEach((q,i)=>{if(q>0){sales.unshift({menu:MENU_ITEMS[i].n,qty:q,total:q*MENU_ITEMS[i].h,time,date:dateStr,itemIdx:i});saved++;}});
   if(!saved) return;
   localStorage.setItem('fp_sales',JSON.stringify(sales));
   resetCart(); updateSales(); updateStok();
-  const sum=sales.reduce((a,b)=>a+b.total,0);
-  const kpi=document.getElementById('kpi-today');
-  if(kpi) kpi.textContent='Rp '+(sum/1000).toFixed(0)+'K';
   navigator.vibrate&&navigator.vibrate([10,50,10]);
   gotoK(0);
 }
@@ -646,9 +716,18 @@ function updateSales(){
   if(list) list.innerHTML=sales.slice(0,6).map(s=>`<div class="list-item"><div class="item-thumb">${MENU_ITEMS[s.itemIdx!==undefined?s.itemIdx:0].e}</div><div class="item-main"><div class="item-title">${s.menu} x${s.qty}</div><div class="item-sub">${s.time}</div></div><div class="item-right">Rp ${s.total.toLocaleString('id-ID')}</div></div>`).join('');
   const last=document.getElementById('last-sales');
   if(last&&list) last.innerHTML=list.innerHTML;
-  const sum=sales.reduce((a,b)=>a+b.total,0);
+  recalcKpiToday();
+}
+
+// Hitung ulang KPI "Penjualan Hari Ini" hanya dari transaksi hari ini, sinkron dengan data sales asli
+function recalcKpiToday(){
+  const today=new Date().toLocaleDateString('id-ID');
+  const todaySales=sales.filter(s=>(s.date||today)===today);
+  const sum=todaySales.reduce((a,b)=>a+b.total,0);
   const kpi=document.getElementById('kpi-today');
   if(kpi) kpi.textContent='Rp '+(sum/1000).toFixed(0)+'K';
+  const kpiCount=document.getElementById('kpi-today-count');
+  if(kpiCount) kpiCount.textContent=todaySales.length+' transaksi';
 }
 
 // =================== STOK ===================
@@ -672,7 +751,7 @@ function saveStokModal(){
 }
 
 function updateStok(){
-  const soldByItem=[0,0,0,0];
+  const soldByItem=MENU_ITEMS.map(()=>0);
   sales.forEach(s=>{if(s.itemIdx!==undefined) soldByItem[s.itemIdx]+=s.qty;});
   const tbody=document.getElementById('stok-tbody');
   if(!tbody) return;
@@ -696,33 +775,83 @@ function updateStok(){
 let faceStream=null, faceDetecting=false, faceCheckedIn=false, faceCheckedOut=false;
 let faceApiReady=false, faceDetectHoldMs=0, faceCountdownTimer=null;
 const FACE_HOLD_REQUIRED=3000; // 3 detik wajah stabil = auto check-in
+const FACE_MATCH_THRESHOLD=0.5; // jarak euclidean maksimal dianggap wajah yang sama (semakin kecil semakin mirip)
+const FACE_REG_HOLD_REQUIRED=2000; // 2 detik wajah stabil = otomatis daftar wajah baru
 
-async function loadFaceApi(){
-  const STATUS=document.getElementById('face-status');
-  const OVERLAY=document.getElementById('face-overlay-text');
-  STATUS.textContent='Memuat model AI...';
-  OVERLAY.textContent='Memuat model AI...';
-  try{
-    const MODEL_URL='https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model';
-    await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-    await faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL);
-    faceApiReady=true;
-    STATUS.textContent='Model siap. Arahkan wajah ke frame.';
-    OVERLAY.textContent='Posisikan wajah anda';
-  }catch(e){
-    faceApiReady=false;
-    STATUS.textContent='Gagal muat model (perlu internet)';
-    OVERLAY.textContent='Model gagal dimuat';
-  }
+// ---- Face data (data wajah karyawan) disimpan di localStorage per user ----
+function getFaceStorageKey(){
+  return 'fp_face_'+(window.currentUser||'karyawan');
 }
+function getStoredFaceData(){
+  try{
+    const raw=localStorage.getItem(getFaceStorageKey());
+    return raw?JSON.parse(raw):null;
+  }catch(e){return null;}
+}
+function hasStoredFace(){
+  const d=getStoredFaceData();
+  return !!(d&&Array.isArray(d.descriptor)&&d.descriptor.length===128);
+}
+function saveFaceData(descriptorArray, snapshotDataUrl){
+  const data={descriptor:descriptorArray, savedAt:Date.now(), photo:snapshotDataUrl||null};
+  localStorage.setItem(getFaceStorageKey(), JSON.stringify(data));
+}
+function matchesStoredFace(descriptor){
+  const stored=getStoredFaceData();
+  if(!stored||!stored.descriptor) return false;
+  const dist=faceapi.euclideanDistance(descriptor, stored.descriptor);
+  return dist<=FACE_MATCH_THRESHOLD;
+}
+
+let faceApiLoadPromise=null;
+function loadFaceApi(){
+  if(faceApiReady) return Promise.resolve();
+  if(faceApiLoadPromise) return faceApiLoadPromise; // sudah dalam proses memuat, jangan ulang
+  faceApiLoadPromise=(async()=>{
+    const STATUS=document.getElementById('face-status');
+    const OVERLAY=document.getElementById('face-overlay-text');
+    if(STATUS) STATUS.textContent='Memuat model AI...';
+    if(OVERLAY) OVERLAY.textContent='Memuat model AI...';
+    try{
+      // Model ringan (tiny) — berjalan sepenuhnya di browser (in-browser inference), tanpa server
+      const MODEL_URL='https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model';
+      await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+        faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
+        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+      ]);
+      faceApiReady=true;
+      if(STATUS) STATUS.textContent='Model siap. Arahkan wajah ke frame.';
+      if(OVERLAY) OVERLAY.textContent='Posisikan wajah anda';
+    }catch(e){
+      faceApiReady=false;
+      faceApiLoadPromise=null; // izinkan retry pada percobaan berikutnya
+      if(STATUS) STATUS.textContent='Gagal muat model (perlu internet)';
+      if(OVERLAY) OVERLAY.textContent='Model gagal dimuat';
+      throw e;
+    }
+  })();
+  return faceApiLoadPromise;
+}
+// Preload model AI sesegera mungkin di background (saat skrip dimuat),
+// supaya saat karyawan login & membuka kamera, model sudah siap dan tidak perlu menunggu.
+loadFaceApi().catch(()=>{});
 
 async function startFaceDetect(){
   const btn=document.getElementById('face-start-btn');
   btn.textContent='Memuat...'; btn.disabled=true;
   if(!faceApiReady) await loadFaceApi();
+
+  // Jika data wajah karyawan belum ada, munculkan modal pendaftaran wajah dulu
+  if(!hasStoredFace()){
+    btn.textContent='Buka Kamera'; btn.disabled=false;
+    openFaceRegisterModal();
+    return;
+  }
+
   try{
     // Minta akses kamera + lokasi sekaligus
-    navigator.geolocation&&navigator.geolocation.getCurrentPosition(()=>{},{},{ enableHighAccuracy:true });
+    navigator.geolocation&&navigator.geolocation.getCurrentPosition(()=>{},()=>{},{ enableHighAccuracy:true });
     faceStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false});
     const video=document.getElementById('face-video');
     video.srcObject=faceStream;
@@ -735,6 +864,92 @@ async function startFaceDetect(){
     document.getElementById('face-status').textContent='Kamera tidak bisa diakses: '+e.message;
     btn.textContent='Buka Kamera'; btn.disabled=false;
   }
+}
+
+// =================== PENDAFTARAN WAJAH (MODAL) ===================
+let faceRegStream=null, faceRegDetecting=false;
+async function openFaceRegisterModal(){
+  const modal=document.getElementById('face-register-modal');
+  modal.style.display='flex';
+  const status=document.getElementById('face-reg-status');
+  status.textContent='Membuka kamera...';
+  if(!faceApiReady) await loadFaceApi();
+  try{
+    faceRegStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false});
+    const video=document.getElementById('face-reg-video');
+    video.srcObject=faceRegStream;
+    await video.play();
+    status.textContent='Posisikan wajah di tengah frame...';
+    startFaceRegisterLoop();
+  }catch(e){
+    status.textContent='Kamera tidak bisa diakses: '+e.message;
+  }
+}
+
+function closeFaceRegisterModal(){
+  faceRegDetecting=false;
+  if(faceRegStream){faceRegStream.getTracks().forEach(t=>t.stop());faceRegStream=null;}
+  document.getElementById('face-register-modal').style.display='none';
+  document.getElementById('face-reg-ring').style.display='none';
+}
+
+async function startFaceRegisterLoop(){
+  const video=document.getElementById('face-reg-video');
+  const canvas=document.getElementById('face-reg-canvas');
+  const ring=document.getElementById('face-reg-ring');
+  const ringProg=document.getElementById('face-reg-ring-progress');
+  const ringNum=document.getElementById('face-reg-ring-num');
+  const status=document.getElementById('face-reg-status');
+  faceRegDetecting=true;
+  let holdStart=null;
+
+  const loop=async()=>{
+    if(!faceRegDetecting) return;
+    if(video.readyState===4&&faceApiReady){
+      const opts=new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:.45});
+      const result=await faceapi.detectSingleFace(video,opts).withFaceLandmarks(true).withFaceDescriptor();
+      canvas.width=video.videoWidth; canvas.height=video.videoHeight;
+      const ctx=canvas.getContext('2d');
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+
+      if(result){
+        const box=result.detection.box;
+        ctx.strokeStyle='#007AFF'; ctx.lineWidth=3;
+        ctx.strokeRect(box.x,box.y,box.width,box.height);
+
+        if(!holdStart) holdStart=Date.now();
+        const elapsed=Date.now()-holdStart;
+        const pct=Math.min(elapsed/FACE_REG_HOLD_REQUIRED,1);
+        const remaining=Math.ceil((FACE_REG_HOLD_REQUIRED-elapsed)/1000);
+
+        ring.style.display='flex';
+        ringProg.style.strokeDashoffset=213*(1-pct);
+        ringNum.textContent=remaining>0?remaining:'✓';
+        status.textContent='Tahan... '+(remaining>0?remaining+'s':'menyimpan');
+
+        if(elapsed>=FACE_REG_HOLD_REQUIRED){
+          faceRegDetecting=false;
+          ring.style.display='none';
+          // Simpan snapshot wajah
+          const snap=document.createElement('canvas');
+          snap.width=video.videoWidth; snap.height=video.videoHeight;
+          snap.getContext('2d').drawImage(video,0,0);
+          saveFaceData(Array.from(result.descriptor), snap.toDataURL('image/jpeg',0.8));
+          status.textContent='✅ Wajah berhasil terdaftar!';
+          navigator.vibrate&&navigator.vibrate([30,60,30]);
+          showToast('✅ Wajah berhasil didaftarkan');
+          setTimeout(()=>{ closeFaceRegisterModal(); }, 800);
+          return;
+        }
+      } else {
+        holdStart=null;
+        ring.style.display='none';
+        status.textContent='Posisikan wajah di tengah frame...';
+      }
+    }
+    requestAnimationFrame(loop);
+  };
+  loop();
 }
 
 async function startFaceLoop(){
@@ -752,12 +967,14 @@ async function startFaceLoop(){
     if(!faceDetecting) return;
     if(video.readyState===4&&faceApiReady){
       const opts=new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:.45});
-      const result=await faceapi.detectSingleFace(video,opts).withFaceLandmarks(true);
+      const result=await faceapi.detectSingleFace(video,opts).withFaceLandmarks(true).withFaceDescriptor();
       canvas.width=video.videoWidth; canvas.height=video.videoHeight;
       const ctx=canvas.getContext('2d');
       ctx.clearRect(0,0,canvas.width,canvas.height);
 
-      if(result){
+      const isMatch=result&&matchesStoredFace(result.descriptor);
+
+      if(result&&isMatch){
         const box=result.detection.box;
         const score=Math.round(result.detection.score*100);
         // Bracket corners
@@ -788,6 +1005,12 @@ async function startFaceLoop(){
           return;
         }
         STATUS.textContent=faceCheckedIn?`Check-Out dalam ${remaining}s...`:`Check-In dalam ${remaining}s...`;
+      } else if(result&&!isMatch){
+        holdStart=null;
+        ring.style.display='none';
+        const box=result.detection.box;
+        ctx.strokeStyle='#FF3B30'; ctx.lineWidth=3; ctx.strokeRect(box.x,box.y,box.width,box.height);
+        STATUS.textContent='Wajah tidak cocok dengan data karyawan';
       } else {
         holdStart=null;
         ring.style.display='none';
@@ -864,6 +1087,36 @@ function stopCamera(){
   document.getElementById('face-overlay-text').textContent='Kamera ditutup';
 }
 
+// Demo only: lewati presensi tanpa kamera/wajah
+function skipPresensiDemo(){
+  const now=new Date();
+  const time=now.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
+  const dateStr=now.toLocaleDateString('id-ID');
+  if(!faceCheckedIn){
+    faceCheckedIn=true;
+    document.getElementById('punch-info').innerHTML=`<span style="color:var(--green)">✅ Check-in (demo): ${time}</span>`;
+    document.getElementById('presensi-status').textContent='Hadir';
+    document.getElementById('presensi-time').textContent=time;
+    presensi.unshift({date:dateStr,in:time,out:'-',lokasi:'(dilewati - demo)'});
+    localStorage.setItem('fp_presensi',JSON.stringify(presensi));
+    updatePresensi(); applyLocks();
+    document.getElementById('face-start-btn').textContent='Buka Kamera (Check-Out)';
+    document.getElementById('face-status').textContent='Check-in (demo) berhasil!';
+    showToast('⏭️ Presensi dilewati (demo) — Check-In '+time);
+  } else if(!faceCheckedOut){
+    faceCheckedOut=true;
+    const prev=document.getElementById('punch-info').innerHTML;
+    document.getElementById('punch-info').innerHTML=prev+` &nbsp;|&nbsp; <span style="color:var(--orange2)">🚪 Check-out (demo): ${time}</span>`;
+    if(presensi.length>0) presensi[0].out=time;
+    localStorage.setItem('fp_presensi',JSON.stringify(presensi));
+    updatePresensi();
+    document.getElementById('face-start-btn').style.display='none';
+    document.getElementById('face-status').textContent='Presensi (demo) selesai.';
+    showToast('⏭️ Check-Out (demo) tercatat — '+time);
+  }
+  navigator.vibrate&&navigator.vibrate([20,40,20]);
+}
+
 function startClock(){
   setInterval(()=>{
     const d=new Date();
@@ -889,6 +1142,84 @@ function showToast(msg){
   if(!t){t=document.createElement('div');t.id='fp-toast';t.style.cssText='position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:rgba(30,30,30,.92);color:white;padding:10px 20px;border-radius:20px;font-size:14px;font-weight:500;z-index:9999;transition:opacity .3s;white-space:nowrap;backdrop-filter:blur(10px)';document.body.appendChild(t);}
   t.textContent=msg; t.style.opacity='1';
   clearTimeout(t._to); t._to=setTimeout(()=>{t.style.opacity='0';},2500);
+}
+
+// =================== PROFILE MENU ===================
+function openProfileMenu(){
+  document.getElementById('profile-overlay').style.display='block';
+  document.getElementById('profile-menu').style.display='block';
+}
+function closeProfileMenu(){
+  document.getElementById('profile-overlay').style.display='none';
+  document.getElementById('profile-menu').style.display='none';
+}
+function profileAction(action){
+  closeProfileMenu();
+  switch(action){
+    case 'foto':
+      openBottomSheet('Ganti Foto', `
+        <div style="text-align:center;padding:8px 0 4px">
+          <div style="width:84px;height:84px;border-radius:42px;background:linear-gradient(135deg,var(--orange1),var(--orange2));display:flex;align-items:center;justify-content:center;margin:0 auto 16px"><ion-icon name="person" style="font-size:40px;color:white"></ion-icon></div>
+          <div style="margin-bottom:18px">Pilih sumber foto baru untuk profil Anda.</div>
+          <button onclick="closeBottomSheet()" style="width:100%;padding:14px;border:none;border-radius:12px;background:var(--accent);color:white;font-size:15px;font-weight:600;margin-bottom:10px">📷 Ambil dari Kamera</button>
+          <button onclick="closeBottomSheet()" style="width:100%;padding:14px;border:1.5px solid var(--border);border-radius:12px;background:transparent;color:var(--text);font-size:15px;font-weight:600">🖼️ Pilih dari Galeri</button>
+        </div>
+        <div style="text-align:center;font-size:12px;margin-top:12px">(Fitur demo — belum tersambung ke penyimpanan)</div>
+      `);
+      break;
+    case 'akun':
+      openBottomSheet('Informasi Akun', `
+        <div class="list-item"><div class="item-main"><div class="item-title" style="color:var(--text)">Nama</div></div><div class="item-right">${document.getElementById('profile-menu-name').textContent}</div></div>
+        <div class="list-item"><div class="item-main"><div class="item-title" style="color:var(--text)">Role</div></div><div class="item-right">${document.getElementById('profile-menu-role').textContent}</div></div>
+        <div class="list-item"><div class="item-main"><div class="item-title" style="color:var(--text)">Username</div></div><div class="item-right">${window.currentUser||'-'}</div></div>
+        <div class="list-item" style="border-bottom:none"><div class="item-main"><div class="item-title" style="color:var(--text)">Status</div></div><div class="item-right"><span class="badge badge-green">Aktif</span></div></div>
+        <div style="font-size:12px;margin-top:8px">(Data demo)</div>
+      `);
+      break;
+    case 'gaji':
+      openBottomSheet('Gaji', `
+        <div class="card" style="background:var(--bg);margin-bottom:12px">
+          <div class="card-title">Gaji Bulan Ini</div>
+          <div class="metric">Rp 2.500.000</div>
+          <div class="metric-sub"><span class="badge badge-red">Belum Dibayar</span></div>
+        </div>
+        <div class="list-item"><div class="item-main"><div class="item-title" style="color:var(--text)">Gaji Pokok</div></div><div class="item-right">Rp 2.200.000</div></div>
+        <div class="list-item"><div class="item-main"><div class="item-title" style="color:var(--text)">Tunjangan</div></div><div class="item-right">Rp 300.000</div></div>
+        <div class="list-item" style="border-bottom:none"><div class="item-main"><div class="item-title" style="color:var(--text)">Potongan</div></div><div class="item-right">Rp 0</div></div>
+        <div style="font-size:12px;margin-top:8px">(Data demo)</div>
+      `);
+      break;
+    case 'switch':
+      openBottomSheet('Switch Akun', `
+        <div style="margin-bottom:14px">Anda akan keluar dari akun ini dan kembali ke halaman login untuk masuk dengan akun lain.</div>
+        <button onclick="logout()" style="width:100%;padding:14px;border:none;border-radius:12px;background:var(--accent);color:white;font-size:15px;font-weight:600;margin-bottom:10px">Ganti Akun</button>
+        <button onclick="closeBottomSheet()" style="width:100%;padding:14px;border:1.5px solid var(--border);border-radius:12px;background:transparent;color:var(--secondary);font-size:15px;font-weight:600">Batal</button>
+      `);
+      break;
+    case 'logout':
+      openBottomSheet('Keluar', `
+        <div style="margin-bottom:14px">Apakah Anda yakin ingin keluar dari aplikasi?</div>
+        <button onclick="logout()" style="width:100%;padding:14px;border:none;border-radius:12px;background:var(--orange1);color:white;font-size:15px;font-weight:600;margin-bottom:10px">Ya, Keluar</button>
+        <button onclick="closeBottomSheet()" style="width:100%;padding:14px;border:1.5px solid var(--border);border-radius:12px;background:transparent;color:var(--secondary);font-size:15px;font-weight:600">Batal</button>
+      `);
+      break;
+  }
+}
+
+// =================== BOTTOM SHEET (generik) ===================
+function openBottomSheet(title, bodyHtml){
+  document.getElementById('bottomsheet-title').textContent=title;
+  document.getElementById('bottomsheet-body').innerHTML=bodyHtml;
+  document.getElementById('bottomsheet-overlay').style.display='block';
+  const sheet=document.getElementById('bottomsheet');
+  sheet.style.display='block';
+  requestAnimationFrame(()=>{ sheet.style.transform='translateY(0)'; });
+}
+function closeBottomSheet(){
+  const sheet=document.getElementById('bottomsheet');
+  sheet.style.transform='translateY(100%)';
+  document.getElementById('bottomsheet-overlay').style.display='none';
+  setTimeout(()=>{ sheet.style.display='none'; }, 250);
 }
 
 // =================== MISC ===================
